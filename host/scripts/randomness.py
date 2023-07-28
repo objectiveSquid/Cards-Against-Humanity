@@ -31,4 +31,4 @@ def choose_random_question(questions: list[str]) -> str:
 
 
 def choose_random_card(cards: list[str]) -> str:
-    return cards.pop(randint(1, len(cards) - 1))
+    return cards.pop(randint(0, len(cards) - 1))

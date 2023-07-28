@@ -1,8 +1,8 @@
 from scripts.checks import can_see_played_cards, can_vote_winner, can_play_cards, auth
 from scripts.randomness import choose_random_question, choose_random_card
 from scripts.extract import get_points_from_players
-from flask import Response, request, jsonify, Flask
 from scripts.disk import read_questions, read_cards
+from flask import Response, request, jsonify, Flask
 from scripts.visual import show_player_login_infos
 from scripts.get_settings import get_settings
 from scripts.generate import generate_players
@@ -20,12 +20,14 @@ app = Flask(__name__)
 def play_cards() -> Response:
     global vote_in_progress, required_cards, game_ending, card_pool, players, cards
 
-    data: dict[str, str] = request.json
+    data: dict[str, str | list[str]] = request.json
     username = data.get("username")
     key = data.get("key")
     cards = data.get("cards")
 
-    authenticated = can_play_cards(key, username, required_cards, cards, players)
+    authenticated = can_play_cards(
+        key, username, required_cards, card_pool, cards, players
+    )
 
     if not authenticated[0]:
         return Response(authenticated[1], 403)
@@ -36,6 +38,7 @@ def play_cards() -> Response:
         return jsonify([choose_random_card(cards) for _ in range(required_cards)])
     except IndexError:
         game_ending = True
+        return Response("game is now ending", 202)
 
 
 @app.route("/played-cards", methods=["GET"])
@@ -51,6 +54,21 @@ def played_cards() -> Response:
         return Response(authenticated[1], 403)
 
     return jsonify(card_pool)
+
+
+@app.route("/played-players", methods=["GET"])
+def played_players() -> Response:
+    global card_pool, players
+
+    data: dict[str, str] = request.json
+    username = data.get("username")
+    key = data.get("key")
+
+    authenticated = auth(key, username, players)
+    if not authenticated[0]:
+        return Response(authenticated[1], 403)
+
+    return jsonify(list(card_pool.keys()))
 
 
 @app.route("/held-cards", methods=["GET"])
@@ -99,6 +117,13 @@ def send_active_question() -> Response:
     return Response(active_question, 200)
 
 
+@app.route("/player-names", methods=["GET"])
+def send_player_amount() -> Response:
+    global players
+
+    return jsonify(list(players.keys()))
+
+
 @app.route("/winners", methods=["GET"])
 def send_winners() -> Response:
     global game_ending, players
@@ -140,12 +165,14 @@ def check_credentials() -> Response:
 
 
 def wait_for_submits() -> None:
-    global game_ending, game_ended, card_pool, players
+    global active_question, required_cards, game_ending, game_ended, card_pool, players
 
     if game_ending:
         game_ended = True
         while True:
             sleep(0.5)  # do nothing, the game has ended
+
+    required_cards = active_question.count("{}")
 
     while len(card_pool) != len(players):
         sleep(0.5)
@@ -189,7 +216,7 @@ def main() -> None:
     round_winner: winner of current round, if empty - the winner has not yet been chosen
     card_pool: cards that players have played in this round
     required_cards: the amount of cards to be played by each player
-    players: dict of players looking like this {"player_name": PlayerObject}
+    players: dict of players looking like this {"player_name": Player}
     active_question: the active question card
     non_voters: player names who have yet to vote for a winner
     vote_in_progress: if a vote is in progress (no winner chosen or not all players have submitted cards)

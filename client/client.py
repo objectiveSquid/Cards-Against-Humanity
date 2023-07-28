@@ -1,7 +1,20 @@
-from scripts.msgs import VALID_CREDENTIALS, CURRENT_QUESTION, CHOOSE_CARD, YOUR_CARDS
-from scripts.fetch import get_card_pool, get_question, is_voting, get_cards
+from scripts.msgs import (
+    WAIT_FOR_OTHER_PLAYERS,
+    VALID_CREDENTIALS,
+    CURRENT_QUESTION,
+    CHOOSE_CARD,
+    YOUR_CARDS,
+)
+from scripts.fetch import (
+    get_played_players,
+    get_player_names,
+    get_card_pool,
+    get_question,
+    is_voting,
+    get_cards,
+)
+from scripts.visual import format_played_players, format_cards, clear_screen
 from scripts.warns import INVALID_CREDENTIALS, GENERIC_ERROR
-from scripts.visual import format_cards, clear_screen
 from scripts.alternatives import string_format
 from scripts.checks import check_credentials
 from scripts.user_input import getch_int
@@ -28,20 +41,35 @@ def main() -> None:
         print(VALID_CREDENTIALS)
 
     try:  # im sorry for - i have sinned mr. "good design"
+        has_played_cards = False
+        PLAYER_NAMES = get_player_names(BASE_URL)
         while True:
             clear_screen()
-            question = get_question(USERNAME, KEY, BASE_URL)
-            voting = is_voting(USERNAME, KEY, BASE_URL)
+            question = get_question(BASE_URL)
+            voting = is_voting(BASE_URL)
             chosen_cards = []
             if voting:
                 card_pool = get_card_pool(USERNAME, KEY, BASE_URL)
                 # TODO
+            elif has_played_cards:
+                played_players_response = get_played_players(USERNAME, KEY, BASE_URL)
+                if isinstance(played_players_response, str):
+                    print(GENERIC_ERROR + played_players_response)
+                print(WAIT_FOR_OTHER_PLAYERS)
+                print(
+                    format_played_players(
+                        PLAYER_NAMES, played_players_response, USERNAME
+                    )
+                )
+                sleep(1)
+                clear_screen()
+                continue
             else:
                 held_cards = get_cards(USERNAME, KEY, BASE_URL)
+                has_played_cards = False
                 while True:
-                    clear_screen()
                     print(YOUR_CARDS + format_cards(held_cards))
-                    print(CURRENT_QUESTION + string_format(question, chosen_cards))
+                    print(CURRENT_QUESTION + string_format(question, *chosen_cards))
                     print(CHOOSE_CARD, end="", flush=True)
                     chosen_card_index = getch_int(
                         1, len(held_cards), other_allowed="cs"
@@ -49,16 +77,22 @@ def main() -> None:
                     if chosen_card_index == "c":
                         held_cards.extend(chosen_cards)
                         chosen_cards.clear()
+                        clear_screen()
                         continue
                     elif chosen_card_index == "s":
                         cards_submit_response = submit_cards(
                             USERNAME, KEY, chosen_cards, BASE_URL
                         )
                         if not cards_submit_response[0]:
+                            clear_screen()
                             print(GENERIC_ERROR + cards_submit_response[1])
+                            continue
+                        has_played_cards = True
+                        break
 
                     else:
                         chosen_cards.append(held_cards.pop(chosen_card_index - 1))
+                    clear_screen()
     except Exception as error:
         print(error)
         exit()

@@ -22,7 +22,7 @@ else:
 def string_format(string_to_format: str, *args: Iterable[str]) -> str:
     for arg in args:
         try:
-            string_to_format = string_to_format.format(arg)
+            string_to_format = string_to_format.replace("{}", arg, 1)
         except IndexError:
             break
-    return string_to_format
+    return string_to_format.replace("{}", "_______")

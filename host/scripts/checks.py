@@ -43,6 +43,7 @@ def can_play_cards(
     key: str,
     username: str,
     required_cards: int,
+    card_pool: dict[str, list[str]],
     cards_to_play: list[str],
     players: dict[str, Player],
 ) -> tuple[bool, str]:
@@ -57,6 +58,8 @@ def can_play_cards(
         return False, "NOT_ENOUGH_CARDS"
     elif ["" for card in cards_to_play if card not in player.cards]:
         return False, "CARDS_NOT_OWNED_BY_PLAYER"
+    elif username in card_pool:
+        return False, "PLAYER_HAS_ALREADY_PLAYED_CARDS"
 
     return True, "ALL_TESTS_PASSED"
 
