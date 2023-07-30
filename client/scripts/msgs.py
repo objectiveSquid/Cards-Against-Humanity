@@ -9,3 +9,6 @@ CHOOSE_CARD = f"{Fore.BLUE}Choose a card to play, C to remove selected cards, S 
 WAIT_FOR_OTHER_PLAYERS = (
     f"{Fore.BLUE}Please wait for the other players to play their cards:{Fore.RESET}"
 )
+PLAYED_CARDS = f"{Fore.BLUE}Played cards:{Fore.RESET}"
+ASK_WINNER = f"{Fore.BLUE}Winner name: {Fore.RESET}"
+NON_VOTERS = f"{Fore.BLUE}Player votes:{Fore.RESET}"

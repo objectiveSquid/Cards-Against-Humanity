@@ -11,7 +11,7 @@ def get_username() -> str:
 
 
 def get_key() -> str:
-    password = input(ASK_KEY)
+    password = input(ASK_KEY).strip()
     if len(password) == 0:
         print(INVALID_KEY)
         return get_key()

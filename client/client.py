@@ -2,24 +2,33 @@ from scripts.msgs import (
     WAIT_FOR_OTHER_PLAYERS,
     VALID_CREDENTIALS,
     CURRENT_QUESTION,
+    PLAYED_CARDS,
     CHOOSE_CARD,
     YOUR_CARDS,
+    NON_VOTERS,
 )
 from scripts.fetch import (
     get_played_players,
     get_player_names,
+    get_non_voters,
     get_card_pool,
     get_question,
     is_voting,
     get_cards,
 )
-from scripts.visual import format_played_players, format_cards, clear_screen
+from scripts.visual import (
+    format_played_players,
+    format_played_cards,
+    format_non_voters,
+    format_cards,
+    clear_screen,
+)
 from scripts.warns import INVALID_CREDENTIALS, GENERIC_ERROR
+from scripts.user_input import get_winner_name, getch_int
+from scripts.send import submit_cards, vote_winner
 from scripts.alternatives import string_format
 from scripts.checks import check_credentials
-from scripts.user_input import getch_int
 from scripts.get_login import get_login
-from scripts.send import submit_cards
 from time import sleep
 
 SCHEME = "http"
@@ -42,19 +51,44 @@ def main() -> None:
 
     try:  # im sorry for - i have sinned mr. "good design"
         has_played_cards = False
+        has_voted = False
         PLAYER_NAMES = get_player_names(BASE_URL)
         while True:
             clear_screen()
             question = get_question(BASE_URL)
             voting = is_voting(BASE_URL)
             chosen_cards = []
+            if voting and has_voted:
+                non_voters_response = get_non_voters(USERNAME, KEY, BASE_URL)
+                if isinstance(non_voters_response, str):
+                    print(GENERIC_ERROR + non_voters_response)
+                    sleep(1)
+                    continue
+                print(NON_VOTERS)
+                print(format_non_voters(PLAYER_NAMES, non_voters_response, USERNAME))
+                sleep(1)
+                continue
             if voting:
                 card_pool = get_card_pool(USERNAME, KEY, BASE_URL)
-                # TODO
+                if isinstance(card_pool, str):
+                    print(GENERIC_ERROR + card_pool)
+                    sleep(1)
+                    continue
+                print(PLAYED_CARDS)
+                print(format_played_cards(card_pool))
+                winner_name = get_winner_name(PLAYER_NAMES)
+                vote_winner_response = vote_winner(winner_name, USERNAME, KEY, BASE_URL)
+                if not vote_winner_response[0]:
+                    print(GENERIC_ERROR + vote_winner_response[1])
+                    continue
+                has_voted = True
+                continue
             elif has_played_cards:
                 played_players_response = get_played_players(USERNAME, KEY, BASE_URL)
                 if isinstance(played_players_response, str):
                     print(GENERIC_ERROR + played_players_response)
+                    sleep(1)
+                    continue
                 print(WAIT_FOR_OTHER_PLAYERS)
                 print(
                     format_played_players(
@@ -62,11 +96,11 @@ def main() -> None:
                     )
                 )
                 sleep(1)
-                clear_screen()
                 continue
             else:
                 held_cards = get_cards(USERNAME, KEY, BASE_URL)
                 has_played_cards = False
+                has_voted = False
                 while True:
                     print(YOUR_CARDS + format_cards(held_cards))
                     print(CURRENT_QUESTION + string_format(question, *chosen_cards))

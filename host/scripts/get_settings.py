@@ -31,7 +31,7 @@ def get_cards_per_player() -> int:
     return cards_per_player
 
 
-def get_settings() -> dict[str, str]:
+def get_settings() -> dict[str, list[str] | int]:
     return {
         "player_names": get_player_names(),
         "cards_per_player": get_cards_per_player(),

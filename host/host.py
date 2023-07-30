@@ -1,4 +1,10 @@
-from scripts.checks import can_see_played_cards, can_vote_winner, can_play_cards, auth
+from scripts.checks import (
+    can_see_played_cards,
+    can_see_non_voters,
+    can_vote_winner,
+    can_play_cards,
+    auth,
+)
 from scripts.randomness import choose_random_question, choose_random_card
 from scripts.extract import get_points_from_players
 from scripts.disk import read_questions, read_cards
@@ -71,6 +77,21 @@ def played_players() -> Response:
     return jsonify(list(card_pool.keys()))
 
 
+@app.route("/non-voters", methods=["GET"])
+def send_non_voters() -> Response:
+    global non_voters, players
+
+    data: dict[str, str] = request.json
+    username = data.get("username")
+    key = data.get("key")
+
+    authenticated = can_see_non_voters(key, username, players)
+    if not authenticated[0]:
+        return Response(authenticated[1], 403)
+
+    return jsonify(non_voters)
+
+
 @app.route("/held-cards", methods=["GET"])
 def held_cards() -> Response:
     global players
@@ -124,12 +145,9 @@ def send_player_amount() -> Response:
     return jsonify(list(players.keys()))
 
 
-@app.route("/winners", methods=["GET"])
+@app.route("/player-points", methods=["GET"])
 def send_winners() -> Response:
-    global game_ending, players
-
-    if not game_ended:
-        return Response("game has not yet ended, please wait", 503)
+    global players
 
     return jsonify(get_points_from_players(players))
 
@@ -181,29 +199,22 @@ def wait_for_submits() -> None:
 
 
 def wait_for_votes() -> None:
-    global vote_in_progress, active_question, winner_points, round_winner, non_voters, questions, card_pool, players
+    global vote_in_progress, active_question, round_winner, non_voters, questions, card_pool, players
+    global PLAYER_NAMES
 
+    non_voters = PLAYER_NAMES[:]
     vote_in_progress = True
-    while vote_in_progress:
+    while len(non_voters) > 0:
         for player in players.values():
-            if player.name not in non_voters and player.has_voted:
-                non_voters.append(player.name)
-                continue
-            vote_in_progress = False
-            break
+            if player.has_voted and player.name in non_voters:
+                non_voters.remove(player.name)
+    vote_in_progress = False
 
     round_winner = ""
     card_pool = {}
-    non_voters = []
-    winner_points = ([], -1)
+    non_voters = PLAYER_NAMES[:]
 
     for player in players.values():
-        if winner_points[1] < player.round_score:
-            winner_points = [player.name], player.round_score
-        elif winner_points[1] == player.round_score:
-            winner_points[0].append(
-                player.name
-            )  # this is so multiple players can have the same top score, and still share first place
         player.remove_has_voted()
         player.clear_round_score()
 
@@ -224,6 +235,7 @@ def main() -> None:
     game_ended: ran out of cards to distribute and all players have voted
     """
     global vote_in_progress, active_question, required_cards, round_winner, game_ending, game_ended, non_voters, questions, card_pool, players, cards
+    global CARDS_PER_PLAYER, PLAYER_NAMES, SETTINGS
     SETTINGS = get_settings()
     PLAYER_NAMES = SETTINGS["player_names"]
     CARDS_PER_PLAYER = SETTINGS["cards_per_player"]

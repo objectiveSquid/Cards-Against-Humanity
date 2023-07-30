@@ -1,5 +1,6 @@
-from scripts.warns import NUM_TOO_SMALL, NUM_TOO_LARGE, INVALID_INT
+from scripts.warns import NAME_NOT_FOUND, NUM_TOO_SMALL, NUM_TOO_LARGE, INVALID_INT
 from scripts.alternatives import getch
+from scripts.msgs import ASK_WINNER
 from typing import Iterable
 
 
@@ -29,3 +30,12 @@ def getch_int(
             print(NUM_TOO_LARGE)
             continue
         return number
+
+
+def get_winner_name(player_names: Iterable[str]) -> str:
+    player_names = [player_name.lower() for player_name in player_names]
+    winner_name = input(ASK_WINNER).strip().lower()
+    if winner_name not in player_names:
+        print(NAME_NOT_FOUND)
+        return get_winner_name(player_names)
+    return winner_name

@@ -1,6 +1,14 @@
 from requests import get
 
 
+def get_non_voters(username: str, key: str, base_url: str) -> list[str] | str:
+    response = get(f"{base_url}/non-voters", json={"username": username, "key": key})
+    if response.status_code == 200:
+        return response.json()
+    else:
+        return response.text
+
+
 def get_cards(username: str, key: str, base_url: str) -> list[str] | str:
     response = get(f"{base_url}/held-cards", json={"username": username, "key": key})
     if response.status_code == 200:

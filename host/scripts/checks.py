@@ -20,6 +20,8 @@ def can_vote_winner(
         return False, "WINNER_USER_NOT_FOUND"
     elif player.has_voted:
         return False, "PLAYER_HAS_VOTED"
+    elif username == winner_username:
+        return False, "CANNOT_VOTE_FOR_YOURSELF"
 
     return True, "ALL_TESTS_PASSED"
 
@@ -60,6 +62,20 @@ def can_play_cards(
         return False, "CARDS_NOT_OWNED_BY_PLAYER"
     elif username in card_pool:
         return False, "PLAYER_HAS_ALREADY_PLAYED_CARDS"
+
+    return True, "ALL_TESTS_PASSED"
+
+
+def can_see_non_voters(
+    key: str, username: str, players: dict[str, Player]
+) -> tuple[bool, str]:
+    authenticated = auth(key, username, players)
+    if not authenticated[0]:
+        return False, authenticated[1]
+
+    player = players.get(username)
+    if not player.has_voted:
+        return False, "PLAYER_HAS_NOT_VOTED"
 
     return True, "ALL_TESTS_PASSED"
 
